@@ -2,8 +2,8 @@ package database
 
 import (
 	"EmployeeDetailsGoDynamoDB/models"
-	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,6 +12,31 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 )
+
+type EmployeeDetail struct {
+	UserId            string `json:"userId,omitempty"`
+	JobTitleName      string `json:"jobTitleName,omitempty"`
+	FirstName         string `json:"firstName,omitempty"`
+	LastName          string `json:"lastName,omitempty"`
+	PreferredFullName string `json:"preferredFullName,omitempty"`
+	EmployeeCode      string `json:"employeeCode,omitempty"`
+	Region            string `json:"region,omitempty"`
+	PhoneNumber       string `json:"phoneNumber,omitempty"`
+	EmailAddress      string `json:"emailAddress,omitempty"`
+}
+
+type EmployeeDetail1 struct {
+	Pkey              string `json:"pkey,omitempty"`
+	UserId            string `json:"userId,omitempty"`
+	JobTitleName      string `json:"jobTitleName,omitempty"`
+	FirstName         string `json:"firstName,omitempty"`
+	LastName          string `json:"lastName,omitempty"`
+	PreferredFullName string `json:"preferredFullName,omitempty"`
+	EmployeeCode      string `json:"employeeCode,omitempty"`
+	Region            string `json:"region,omitempty"`
+	PhoneNumber       string `json:"phoneNumber,omitempty"`
+	EmailAddress      string `json:"emailAddress,omitempty"`
+}
 
 var dynamo *dynamodb.DynamoDB
 
@@ -54,79 +79,29 @@ func CreateTable(TableName string, Pkey string, PkeyType string) {
 	fmt.Println(result)
 }
 
-// func Load() models.EmployeeDetails {
-// 	jsonFile, err := os.Open("employee.json")
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	fmt.Println("Successfully Opened employee.json")
-// 	defer jsonFile.Close()
+func LoadData(pkey string, empData models.EmployeeDetail, tableName string) {
 
-// 	byteValue, _ := ioutil.ReadAll(jsonFile)
+	empdb := models.EmployeeDetailDynamoDB{
+		EmployeeDetail: empData,
+		Pkey:           pkey,
+	}
+	fmt.Printf("\n%+v\n", empdb)
 
-// 	var emp models.EmployeeDetails
-// 	json.Unmarshal(byteValue, &emp)
-// 	return emp
-// }
-
-// func JsonToMap(fileName string) map[string]interface{} {
-// 	jsonFile, err := os.Open(fileName)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	fmt.Println("Successfully Opened ", fileName)
-
-// 	b, err := ioutil.ReadAll(jsonFile)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	var result map[string]interface{}
-// 	json.Unmarshal([]byte(b), &result)
-
-// 	return result
-// }
-
-func LoadData(FileName string, TableName string) {
-
-	moviesData, err := os.Open(FileName)
-	defer moviesData.Close()
+	info, err := dynamodbattribute.MarshalMap(empdb)
 	if err != nil {
-		fmt.Println("Could not open the moviedata.json file", err.Error())
-		os.Exit(1)
+		panic(fmt.Sprintf("failed to marshal the employees, %v", err))
 	}
 
-	var movies []models.EmployeeDetail
-	err = json.NewDecoder(moviesData).Decode(&movies)
+	input := &dynamodb.PutItemInput{
+		Item:      info,
+		TableName: aws.String(tableName),
+	}
+
+	_, err = dynamo.PutItem(input)
 	if err != nil {
-		fmt.Println("Could not decode the moviedata.json data", err.Error())
-		os.Exit(1)
+		fmt.Println(err.Error())
+		return
 	}
-
-	fmt.Printf("%+v", movies)
-
-	for _, em := range movies {
-
-		info, err := dynamodbattribute.MarshalMap(em)
-		if err != nil {
-			panic(fmt.Sprintf("failed to marshal the employees, %v", err))
-		}
-
-		input := &dynamodb.PutItemInput{
-			Item:      info,
-			TableName: aws.String(TableName),
-		}
-
-		_, err = dynamo.PutItem(input)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
-	}
-
-	fmt.Printf("We have processed %v records\n", len(movies))
 
 }
 
@@ -134,7 +109,8 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 
 	filt := expression.Name(Filter).Equal(expression.Value(JsonFilter))
 
-	proj := expression.NamesList(expression.Name("userId"),
+	proj := expression.NamesList(expression.Name("pkey"),
+		expression.Name("userId"),
 		expression.Name("jobTitleName"),
 		expression.Name("firstName"),
 		expression.Name("lastName"),
@@ -172,7 +148,7 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 	numItems := 0
 
 	for _, i := range result.Items {
-		item := models.EmployeeDetail{}
+		item := models.EmployeeDetailDynamoDB{}
 
 		err = dynamodbattribute.UnmarshalMap(i, &item)
 
@@ -181,13 +157,9 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 			fmt.Println(err.Error())
 			os.Exit(1)
 		}
-
-		// Which ones had a higher rating than minimum?
-		//if item.Rating > minRating {
-		// Or it we had filtered by rating previously:
-		//   if item.Year == year {
 		numItems++
 
+		fmt.Println("Pkey: " + item.Pkey)
 		fmt.Println("User Id: " + item.UserId)
 		fmt.Println("JobTitleName: " + item.JobTitleName)
 		fmt.Println("FirstName: " + item.FirstName)
@@ -199,4 +171,61 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 		fmt.Println("EmailAddress: " + item.EmailAddress)
 		fmt.Println()
 	}
+}
+
+func ReadQuery(tableName string, query string, queryValue string) {
+
+	var queryInput = &dynamodb.QueryInput{
+		TableName: aws.String(tableName),
+		KeyConditions: map[string]*dynamodb.Condition{
+			query: {
+				ComparisonOperator: aws.String("EQ"),
+				AttributeValueList: []*dynamodb.AttributeValue{
+					{
+						S: aws.String(queryValue),
+					},
+				},
+			},
+		},
+	}
+
+	resp1, err1 := dynamo.Query(queryInput)
+	if err1 != nil {
+		fmt.Println(err1)
+	} else {
+		personObj := []models.EmployeeDetailDynamoDB{}
+		_ = dynamodbattribute.UnmarshalListOfMaps(resp1.Items, &personObj)
+		fmt.Printf("\n%+v\n", personObj)
+	}
+
+}
+
+func GetItem(tableName string, key string, value string) {
+	result, err := dynamo.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			key: {
+				S: aws.String(value),
+			},
+		},
+	})
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	if result.Item == nil {
+		log.Println("Could not find item")
+		return
+	}
+
+	item := models.EmployeeDetailDynamoDB{}
+
+	err = dynamodbattribute.UnmarshalMap(result.Item, &item)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to unmarshal Record, %v", err))
+	}
+
+	fmt.Printf("\n%+v\n", item)
+
 }
