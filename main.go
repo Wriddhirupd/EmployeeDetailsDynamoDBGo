@@ -1,54 +1,39 @@
 package main
 
 import (
-	"EmployeeDetailsGoDynamoDB/database"
-	"EmployeeDetailsGoDynamoDB/models"
-	"encoding/json"
+	"EmployeeDetailsGoDynamoDB/handler"
 	"fmt"
-	"os"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
-	//TO Create TABLE
-	// database.CreateTable("Employee1", "pkey", "S")
+	handler.LoadJSON()
+	res := handler.Validate("CA")
+	fmt.Println(res)
 
-	//LOAD Data to DynamoDB By each item
-	// LoadJSonFile()
+	r := gin.Default()
 
-	//Read All Items using Scan
-	// database.ReadAll("pkey", "nirani", "Employee1")
+	// http://localhost:8080/employeeDetails/nirani
+	r.GET("/employeeDetails/:userId", handler.GetItemHandler)
 
-	//Read An Item using Query
-	// pkeyNames := []string{"rirani", "nirani", "thanks"}
-	// for _, pkey := range pkeyNames {
-	// 	database.ReadQuery("Employee1", "pkey", pkey)
-	// }
+	// http://localhost:8080/employeeDetails/
+	r.GET("/employeeDetails", handler.GetAllHandler)
 
-	//Read An Item using GetItem
-	// database.GetItem("Employee1", "pkey", "nirani")
+	r.Run()
 
-}
+	// /:8080/employeedetails -> GET ALL
 
-//Opens JSON and Parses it to DB LoadData Function
-func LoadJSonFile() {
-	empData, err := os.Open("employee.json")
-	defer empData.Close()
-	if err != nil {
-		fmt.Println("Could not open the moviedata.json file", err.Error())
-		os.Exit(1)
-	}
+	// /:8080/employeedetails/userId -> Get item
 
-	var emp []models.EmployeeDetail
-	err = json.NewDecoder(empData).Decode(&emp)
-	if err != nil {
-		fmt.Println("Could not decode the moviedata.json data", err.Error())
-		os.Exit(1)
-	}
+	// /:8080/employeedetails/userID -> PATCH
 
-	for _, em := range emp {
-		database.LoadData(em.UserId, em, "Employee1")
-	}
+	// /:8080/employeedetails -> PUT
 
-	fmt.Printf("We have processed %v records\n", len(emp))
+	// include checks for UserID for validation 2nd,3rd, for 4th check if UserID already exists,
+
+	// Create /handler/handler.go Create fns to create, modify
+	// Create /service/service.go Create DB calls here
+
 }

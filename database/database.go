@@ -80,7 +80,7 @@ func LoadData(pkey string, empData models.EmployeeDetail, tableName string) {
 
 }
 
-func ReadAll(Filter string, JsonFilter string, tableName string) {
+func ReadAll(Filter string, JsonFilter string, tableName string) []models.EmployeeDetailDynamoDB {
 
 	filt := expression.Name(Filter).Equal(expression.Value(JsonFilter))
 
@@ -121,12 +121,12 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 	fmt.Println(result.Items)
 
 	numItems := 0
-
+	var emp []models.EmployeeDetailDynamoDB
 	for _, i := range result.Items {
 		item := models.EmployeeDetailDynamoDB{}
 
 		err = dynamodbattribute.UnmarshalMap(i, &item)
-
+		emp = append(emp, item)
 		if err != nil {
 			fmt.Println("Got error unmarshalling:")
 			fmt.Println(err.Error())
@@ -146,9 +146,11 @@ func ReadAll(Filter string, JsonFilter string, tableName string) {
 		fmt.Println("EmailAddress: " + item.EmailAddress)
 		fmt.Println()
 	}
+
+	return emp
 }
 
-func ReadQuery(tableName string, query string, queryValue string) {
+func ReadQuery(tableName string, query string, queryValue string) []models.EmployeeDetailDynamoDB {
 
 	var queryInput = &dynamodb.QueryInput{
 		TableName: aws.String(tableName),
@@ -163,19 +165,21 @@ func ReadQuery(tableName string, query string, queryValue string) {
 			},
 		},
 	}
-
+	var personObj []models.EmployeeDetailDynamoDB
 	resp1, err1 := dynamo.Query(queryInput)
 	if err1 != nil {
 		fmt.Println(err1)
+		return personObj
 	} else {
-		personObj := []models.EmployeeDetailDynamoDB{}
+		personObj = []models.EmployeeDetailDynamoDB{}
 		_ = dynamodbattribute.UnmarshalListOfMaps(resp1.Items, &personObj)
 		fmt.Printf("\n%+v\n", personObj)
+		return personObj
 	}
 
 }
 
-func GetItem(tableName string, key string, value string) {
+func GetItem(tableName string, key string, value string) models.EmployeeDetailDynamoDB {
 	result, err := dynamo.GetItem(&dynamodb.GetItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -186,12 +190,12 @@ func GetItem(tableName string, key string, value string) {
 	})
 	if err != nil {
 		fmt.Println(err.Error())
-		return
+		//return
 	}
 
 	if result.Item == nil {
 		log.Println("Could not find item")
-		return
+		//return
 	}
 
 	item := models.EmployeeDetailDynamoDB{}
@@ -202,5 +206,7 @@ func GetItem(tableName string, key string, value string) {
 	}
 
 	fmt.Printf("\n%+v\n", item)
+
+	return item
 
 }
