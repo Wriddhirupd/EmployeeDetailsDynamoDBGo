@@ -210,3 +210,58 @@ func GetItem(tableName string, key string, value string) models.EmployeeDetailDy
 	return item
 
 }
+
+func CreateItem(emp models.EmployeeDetail, tableName string) (res bool) {
+	res = false
+
+	empdb := models.EmployeeDetailDynamoDB{
+		EmployeeDetail: emp,
+		Pkey:           emp.UserId,
+	}
+	fmt.Printf("\n%+v\n", empdb)
+
+	info, err := dynamodbattribute.MarshalMap(empdb)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal the employees, %v", err))
+	}
+
+	input := &dynamodb.PutItemInput{
+		Item:      info,
+		TableName: aws.String(tableName),
+	}
+
+	_, err = dynamo.PutItem(input)
+	if err != nil {
+		fmt.Println(err.Error())
+
+	} else {
+		res = true
+	}
+	fmt.Println("\nRes: ", res)
+	return res
+}
+
+func UpdateItem(tableName string, key string, value string, keytoBeUpdated string, valueToBeUpdated string) bool {
+	input := &dynamodb.UpdateItemInput{
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":r": {
+				S: aws.String(valueToBeUpdated),
+			},
+		},
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			key: {
+				S: aws.String(value),
+			},
+		},
+		ReturnValues:     aws.String("UPDATED_NEW"),
+		UpdateExpression: aws.String("set " + keytoBeUpdated + " = :r"),
+	}
+
+	_, err := dynamo.UpdateItem(input)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+	return true
+}

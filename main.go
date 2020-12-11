@@ -2,16 +2,18 @@ package main
 
 import (
 	"EmployeeDetailsGoDynamoDB/handler"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
-	handler.LoadJSON()
-	res := handler.Validate("CA")
-	fmt.Println(res)
+	// res := database.UpdateItem("Employee1", "pkey", "wriddhirupd", "firstName", "Neellll")
+
+	// fmt.Println(res)
+	// handler.LoadJSON()
+	// res := handler.Validate("CA")
+	// fmt.Println(res)
 
 	r := gin.Default()
 
@@ -20,6 +22,12 @@ func main() {
 
 	// http://localhost:8080/employeeDetails/
 	r.GET("/employeeDetails", handler.GetAllHandler)
+
+	// http://localhost:8080/employeeDetails/
+	r.POST("employeeDetails/", handler.PostItemHandler)
+
+	//
+	r.PATCH("employeeDetails/", handler.PatchItemHandler)
 
 	r.Run()
 
