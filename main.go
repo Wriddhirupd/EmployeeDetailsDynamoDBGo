@@ -8,13 +8,6 @@ import (
 
 func main() {
 
-	// res := database.UpdateItem("Employee1", "pkey", "wriddhirupd", "firstName", "Neellll")
-
-	// fmt.Println(res)
-	// handler.LoadJSON()
-	// res := handler.Validate("CA")
-	// fmt.Println(res)
-
 	r := gin.Default()
 
 	// http://localhost:8080/employeeDetails/nirani
@@ -26,7 +19,7 @@ func main() {
 	// http://localhost:8080/employeeDetails/
 	r.POST("employeeDetails/", handler.PostItemHandler)
 
-	//
+	// http://localhost:8080/employeeDetails/
 	r.PATCH("employeeDetails/", handler.PatchItemHandler)
 
 	r.Run()
